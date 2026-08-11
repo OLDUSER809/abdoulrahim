@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Faculty & Dean Dashboard — Student Directory, Fees Status, Scholarship Allocation & Attendance Analytics">
+  <title>EduTrack — Faculty & Dean Portal</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏛️</text></svg>">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="dashboard">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">📚 EduTrack</div>
+        <div class="sidebar-role">Faculty & Dean Portal</div>
+      </div>
+      <ul class="sidebar-nav">
+        <li><a href="#" data-section="sec-overview" class="active" onclick="switchSection('sec-overview')"><span class="nav-icon">📊</span><span>Overview</span></a></li>
+        <li><a href="#" data-section="sec-students" onclick="switchSection('sec-students')"><span class="nav-icon">👥</span><span>All Students Directory</span></a></li>
+        <li><a href="#" data-section="sec-fees" onclick="switchSection('sec-fees')"><span class="nav-icon">💳</span><span>Fee Payment Status</span></a></li>
+        <li><a href="#" data-section="sec-scholarships" onclick="switchSection('sec-scholarships')"><span class="nav-icon">🎓</span><span>Scholarship Allocations</span></a></li>
+        <li><a href="analytics.html"><span class="nav-icon">📈</span><span>Full Analytics</span></a></li>
+      </ul>
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="sidebar-avatar" id="sidebar-avatar">RS</div>
+          <div class="sidebar-user-info">
+            <div class="name" id="user-name">Dr. Ramesh Sundaram</div>
+            <div class="email" id="user-email">faculty@edu.in</div>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm btn-full mt-md" onclick="App.logout()" style="color:rgba(255,255,255,0.6);">🚪 Sign Out</button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <div class="top-bar">
+        <div class="top-bar-left">
+          <h1 id="page-title">Faculty & Dean Portal</h1>
+          <p id="page-subtitle">Comprehensive Student Directory, Fee Status & Scholarship Allocations</p>
+        </div>
+        <div class="top-bar-right">
+          <button class="theme-toggle" onclick="App.toggleTheme()">🌙</button>
+        </div>
+      </div>
+
+      <!-- ═══ OVERVIEW SECTION ═══ -->
+      <div class="dashboard-section active" id="sec-overview">
+        <div class="stats-grid stagger">
+          <div class="stat-card purple">
+            <div class="stat-icon">🎓</div>
+            <div class="stat-value" id="fac-total-students">0</div>
+            <div class="stat-label">Total Enrolled Students</div>
+          </div>
+          <div class="stat-card green">
+            <div class="stat-icon">💰</div>
+            <div class="stat-value" id="fac-fees-collected">₹0</div>
+            <div class="stat-label">Total Tuition Fees Collected</div>
+          </div>
+          <div class="stat-card cyan">
+            <div class="stat-icon">🏆</div>
+            <div class="stat-value" id="fac-scholarships-granted">0</div>
+            <div class="stat-label">Active Scholarships Granted</div>
+          </div>
+          <div class="stat-card red">
+            <div class="stat-value" id="fac-fees-overdue">₹0</div>
+            <div class="stat-label">Pending / Overdue Fees</div>
+          </div>
+        </div>
+
+        <div class="content-grid">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">💳 Fee Payment Status Breakdown</h3>
+            </div>
+            <div class="chart-container small">
+              <canvas id="fac-fee-chart"></canvas>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">🎓 Scholarship Distribution</h3>
+            </div>
+            <div class="chart-container small">
+              <canvas id="fac-scholarship-chart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ ALL STUDENTS DIRECTORY SECTION ═══ -->
+      <div class="dashboard-section" id="sec-students">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">👥 Full Student Roster & Information</h3>
+            <input type="text" class="form-input" id="student-search-input" placeholder="Search by name, roll no, or email..." style="width:250px;" onkeyup="renderStudentDirectory()">
+          </div>
+          <div id="faculty-students-table"></div>
+        </div>
+      </div>
+
+      <!-- ═══ FEE STATUS SECTION ═══ -->
+      <div class="dashboard-section" id="sec-fees">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">💳 Institutional Fee Payment Directory</h3>
+          </div>
+          <div id="faculty-fees-table"></div>
+        </div>
+      </div>
+
+      <!-- ═══ SCHOLARSHIP SECTION ═══ -->
+      <div class="dashboard-section" id="sec-scholarships">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">🎓 Student Scholarship Allocation Directory</h3>
+            <span class="badge badge-success">Active Grants</span>
+          </div>
+          <div id="faculty-scholarships-table"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/analytics.js"></script>
+  <script>
+    let currentUser;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      currentUser = App.requireAuth('faculty');
+      if (!currentUser) return;
+
+      App.initSidebar(currentUser);
+      renderFacultyOverview();
+      renderStudentDirectory();
+      renderFeesDirectory();
+      renderScholarshipDirectory();
+    });
+
+    function switchSection(sectionId) {
+      App.setActiveNav(sectionId);
+    }
+
+    function renderFacultyOverview() {
+      const users = Utils.getStore('ih01_users');
+      const students = users.filter(u => u.role === 'student');
+
+      let totalCollected = 0;
+      let totalOverdue = 0;
+      let scholarshipCount = 0;
+      let paidCount = 0;
+      let pendingCount = 0;
+      let overdueCount = 0;
+
+      students.forEach(s => {
+        const fee = s.feeStatus || { paidAmount: 85000, dueAmount: 0, status: 'Paid' };
+        totalCollected += fee.paidAmount || 0;
+        totalOverdue += fee.dueAmount || 0;
+
+        if (fee.status === 'Paid') paidCount++;
+        else if (fee.status === 'Pending') pendingCount++;
+        else overdueCount++;
+
+        if (s.scholarship && s.scholarship.hasScholarship) scholarshipCount++;
+      });
+
+      document.getElementById('fac-total-students').textContent = students.length;
+      document.getElementById('fac-fees-collected').textContent = `₹${(totalCollected / 1000).toFixed(0)}k`;
+      document.getElementById('fac-scholarships-granted').textContent = scholarshipCount;
+      document.getElementById('fac-fees-overdue').textContent = `₹${(totalOverdue / 1000).toFixed(0)}k`;
+
+      // Render Doughnut Charts
+      if (typeof Chart !== 'undefined') {
+        new Chart(document.getElementById('fac-fee-chart'), {
+          type: 'doughnut',
+          data: {
+            labels: ['Paid Full', 'Pending', 'Overdue'],
+            datasets: [{ data: [paidCount, pendingCount, overdueCount], backgroundColor: ['#22c55e', '#f59e0b', '#ef4444'] }]
+          },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+        });
+
+        new Chart(document.getElementById('fac-scholarship-chart'), {
+          type: 'doughnut',
+          data: {
+            labels: ['Scholarship Granted', 'Self-Financed'],
+            datasets: [{ data: [scholarshipCount, students.length - scholarshipCount], backgroundColor: ['#06b6d4', '#6c63ff'] }]
+          },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+        });
+      }
+    }
+
+    function renderStudentDirectory() {
+      const search = (document.getElementById('student-search-input')?.value || '').toLowerCase();
+      const users = Utils.getStore('ih01_users');
+      const students = users.filter(u => u.role === 'student' && (
+        u.name.toLowerCase().includes(search) ||
+        u.email.toLowerCase().includes(search) ||
+        (u.rollNo && u.rollNo.toLowerCase().includes(search))
+      ));
+      const classes = Utils.getStore('ih01_classes');
+
+      const container = document.getElementById('faculty-students-table');
+      container.innerHTML = `
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Roll No</th>
+                <th>Gmail / Contact</th>
+                <th>Class</th>
+                <th>Attendance %</th>
+                <th>Fee Status</th>
+                <th>Scholarship Name</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${students.map(s => {
+                const cls = classes.find(c => c.id === s.classId);
+                const attPct = Utils.calcAttendancePercent(s.id, s.classId);
+                const fee = s.feeStatus || { status: 'Paid' };
+                const sch = s.scholarship || { hasScholarship: false, name: 'N/A' };
+                return `
+                  <tr>
+                    <td><strong>${s.name}</strong></td>
+                    <td><code>${s.rollNo || '-'}</code></td>
+                    <td>${s.email}</td>
+                    <td>${cls ? cls.name : 'CS-A'}</td>
+                    <td><strong style="color:${attPct >= 75 ? 'var(--success-500)' : 'var(--danger-500)'}">${attPct}%</strong></td>
+                    <td><span class="badge ${fee.status === 'Paid' ? 'badge-success' : fee.status === 'Pending' ? 'badge-warning' : 'badge-danger'}">${fee.status}</span></td>
+                    <td>${sch.hasScholarship ? `🏅 <strong>${sch.name}</strong>` : '<span style="color:var(--text-tertiary);">None</span>'}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderFeesDirectory() {
+      const users = Utils.getStore('ih01_users');
+      const students = users.filter(u => u.role === 'student');
+
+      document.getElementById('faculty-fees-table').innerHTML = `
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr><th>Student Name</th><th>Roll No</th><th>Total Fees</th><th>Amount Paid</th><th>Due Amount</th><th>Status</th><th>Due Date</th></tr>
+            </thead>
+            <tbody>
+              ${students.map(s => {
+                const fee = s.feeStatus || { totalFees: 85000, paidAmount: 85000, dueAmount: 0, status: 'Paid', dueDate: '2026-09-15' };
+                return `
+                  <tr>
+                    <td><strong>${s.name}</strong></td>
+                    <td><code>${s.rollNo || '-'}</code></td>
+                    <td>₹${fee.totalFees.toLocaleString()}</td>
+                    <td><strong style="color:var(--success-500)">₹${fee.paidAmount.toLocaleString()}</strong></td>
+                    <td><strong style="color:${fee.dueAmount > 0 ? 'var(--danger-500)' : 'var(--text-secondary)'}">₹${fee.dueAmount.toLocaleString()}</strong></td>
+                    <td><span class="badge ${fee.status === 'Paid' ? 'badge-success' : fee.status === 'Pending' ? 'badge-warning' : 'badge-danger'}">${fee.status}</span></td>
+                    <td>${fee.dueDate}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderScholarshipDirectory() {
+      const users = Utils.getStore('ih01_users');
+      const students = users.filter(u => u.role === 'student' && u.scholarship && u.scholarship.hasScholarship);
+
+      document.getElementById('faculty-scholarships-table').innerHTML = `
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr><th>Student Name</th><th>Roll No</th><th>Scholarship Scheme Name</th><th>Grant Amount</th><th>Approval Status</th></tr>
+            </thead>
+            <tbody>
+              ${students.map(s => `
+                <tr>
+                  <td><strong>${s.name}</strong></td>
+                  <td><code>${s.rollNo || '-'}</code></td>
+                  <td>🏅 <strong>${s.scholarship.name}</strong></td>
+                  <td><strong style="color:var(--cyan-500)">₹${s.scholarship.amount.toLocaleString()}</strong></td>
+                  <td><span class="badge badge-success">${s.scholarship.status}</span></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>

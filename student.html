@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Student Dashboard — QR attendance scanning, 18 Innovations, AI Chatbot Assistant, Placement Hub, Fee Adjustments">
+  <title>EduTrack — Student Ecosystem</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <style>
+    /* Floating AI Assistant Chatbot Styles */
+    .chatbot-fab {
+      position: fixed; bottom: 24px; right: 24px;
+      width: 60px; height: 60px; border-radius: var(--radius-full);
+      background: var(--gradient-primary); color: white;
+      font-size: 1.8rem; display: flex; align-items: center; justify-content: center;
+      box-shadow: var(--shadow-xl); cursor: pointer; z-index: 990;
+      transition: transform 0.2s ease;
+    }
+    .chatbot-fab:hover { transform: scale(1.1); }
+    .chatbot-window {
+      position: fixed; bottom: 95px; right: 24px;
+      width: 360px; height: 480px; background: var(--bg-secondary);
+      border: 1px solid var(--border-color); border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-xl); z-index: 991; display: flex; flex-direction: column;
+      overflow: hidden; opacity: 0; visibility: hidden; transition: all 0.3s ease;
+    }
+    .chatbot-window.active { opacity: 1; visibility: visible; }
+    .chat-header {
+      padding: 16px; background: var(--gradient-primary); color: white;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .chat-body { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+    .chat-msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 0.85rem; line-height: 1.4; }
+    .chat-msg.bot { background: var(--bg-tertiary); color: var(--text-primary); align-self: flex-start; }
+    .chat-msg.user { background: var(--primary-500); color: white; align-self: flex-end; }
+    .chat-footer { padding: 12px; border-top: 1px solid var(--border-light); display: flex; gap: 8px; }
+  </style>
+</head>
+<body>
+  <!-- SVG Gradient definition -->
+  <svg style="width:0;height:0;position:absolute;" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#6c63ff" />
+        <stop offset="50%" stop-color="#a855f7" />
+        <stop offset="100%" stop-color="#06b6d4" />
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <div class="dashboard">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">📚 EduTrack</div>
+        <div class="sidebar-role">Student Ecosystem</div>
+      </div>
+      <ul class="sidebar-nav">
+        <li><a href="#" data-section="sec-student-home" class="active" onclick="switchSection('sec-student-home')"><span class="nav-icon">🏠</span><span>Home & Progress</span></a></li>
+        <li><a href="#" data-section="sec-info-hub" onclick="switchSection('sec-info-hub')"><span class="nav-icon">📁</span><span>Organized Info Hub</span></a></li>
+        <li><a href="#" data-section="sec-placement-hub" onclick="switchSection('sec-placement-hub')"><span class="nav-icon">💼</span><span>Placement & Skills</span></a></li>
+        <li><a href="#" data-section="sec-fees-scholarship" onclick="switchSection('sec-fees-scholarship')"><span class="nav-icon">💳</span><span>Fees & Advance Adj.</span></a></li>
+        <li><a href="#" data-section="sec-exam-planner" onclick="switchSection('sec-exam-planner')"><span class="nav-icon">⏳</span><span>10-Day Exam Countdown</span></a></li>
+        <li><a href="#" data-section="sec-lab-alert" onclick="switchSection('sec-lab-alert')"><span class="nav-icon">🥼</span><span>Pre-Lab Packing</span></a></li>
+        <li><a href="#" data-section="sec-arrear-risk" onclick="switchSection('sec-arrear-risk')"><span class="nav-icon">⚠️</span><span>Arrear Risk Alert</span></a></li>
+        <li><a href="#" data-section="sec-scan" onclick="switchSection('sec-scan')"><span class="nav-icon">📷</span><span>Scan Attendance</span></a></li>
+        <li><a href="#" data-section="sec-timetable" onclick="switchSection('sec-timetable')"><span class="nav-icon">📅</span><span>Timetable</span></a></li>
+        <li><a href="#" data-section="sec-planner" onclick="switchSection('sec-planner')"><span class="nav-icon">🧠</span><span>AI Study Buddy</span></a></li>
+        <li><a href="#" data-section="sec-gamification" onclick="switchSection('sec-gamification')"><span class="nav-icon">🏆</span><span>Rewards & XP</span></a></li>
+        <li><a href="analytics.html"><span class="nav-icon">📊</span><span>Analytics</span></a></li>
+      </ul>
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="sidebar-avatar" id="sidebar-avatar">AK</div>
+          <div class="sidebar-user-info">
+            <div class="name" id="user-name">Arjun Kumar</div>
+            <div class="email" id="user-email">student@edu.in</div>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm btn-full mt-md" onclick="App.logout()" style="color:rgba(255,255,255,0.6);">🚪 Sign Out</button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <div class="top-bar">
+        <div class="top-bar-left">
+          <h1 id="page-title">Welcome back!</h1>
+          <p id="page-subtitle">Smart Campus Ecosystem — 18 Innovations Active</p>
+        </div>
+        <div class="top-bar-right">
+          <button class="btn btn-primary" onclick="triggerQRScan()">📷 Scan Attendance</button>
+          <button class="theme-toggle" onclick="App.toggleTheme()">🌙</button>
+        </div>
+      </div>
+
+      <!-- Top Banners -->
+      <div id="exam-countdown-banner" style="margin-bottom:var(--space-lg);"></div>
+      <div id="lab-day-alert-banner" style="margin-bottom:var(--space-lg);"></div>
+      <div id="risk-score-alert"></div>
+
+      <!-- ═══ HOME SECTION ═══ -->
+      <div class="dashboard-section active" id="sec-student-home">
+        <div class="stats-grid stagger">
+          <div class="stat-card purple" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
+            <div class="attendance-ring">
+              <svg width="160" height="160">
+                <circle class="ring-bg" cx="80" cy="80" r="68"></circle>
+                <circle class="ring-fill" id="ring-circle" cx="80" cy="80" r="68" stroke-dasharray="427" stroke-dashoffset="427"></circle>
+              </svg>
+              <div class="ring-center">
+                <div class="ring-percentage" id="ring-percent">0%</div>
+                <div class="ring-label">Attendance</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="stat-card orange" id="home-streak-card"></div>
+          <div class="stat-card cyan" id="next-class-card"></div>
+          <div class="stat-card green" id="xp-summary-card"></div>
+        </div>
+
+        <div class="content-grid">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">📅 Today's Schedule</h3>
+              <button class="btn btn-ghost btn-sm" onclick="switchSection('sec-timetable')">View Full →</button>
+            </div>
+            <div id="today-timetable-preview"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">🧠 AI Study Buddy Tasks</h3>
+              <button class="btn btn-ghost btn-sm" onclick="switchSection('sec-planner')">Open Planner →</button>
+            </div>
+            <div id="study-buddy-preview"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ 4 & 5. ORGANIZED INFORMATION HUB & TASK TRACKER ═══ -->
+      <div class="dashboard-section" id="sec-info-hub">
+        <div class="tab-nav">
+          <button class="tab-btn active" onclick="showInfoTab('notes', event)">📚 Lecture Notes</button>
+          <button class="tab-btn" onclick="showInfoTab('circulars', event)">📢 Circulars</button>
+          <button class="tab-btn" onclick="showInfoTab('internships', event)">💼 Internships</button>
+          <button class="tab-btn" onclick="showInfoTab('tasks', event)">📋 Deadlines & Tasks</button>
+          <button class="tab-btn" onclick="showInfoTab('directory', event)">🏛️ Staff Directory</button>
+        </div>
+
+        <div class="card" id="info-hub-content"></div>
+      </div>
+
+      <!-- ═══ 11, 12 & 13. PLACEMENT PREPARATION & SKILL ROADMAP ═══ -->
+      <div class="dashboard-section" id="sec-placement-hub">
+        <div class="content-grid">
+          <div class="card">
+            <div class="card-header"><h3 class="card-title">📈 Year-wise Skill Roadmap</h3></div>
+            <div id="skill-roadmap-content"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><h3 class="card-title">👨‍🎓 Senior → Junior Knowledge Sharing</h3></div>
+            <div id="senior-advice-content"></div>
+          </div>
+        </div>
+
+        <div class="card mt-lg">
+          <div class="card-header"><h3 class="card-title">💼 Placement Preparation Hub (Company-wise)</h3></div>
+          <div id="placement-questions-content"></div>
+        </div>
+
+        <div class="card mt-lg">
+          <div class="card-header"><h3 class="card-title">📢 Opportunity Hub (Hackathons & Contests)</h3></div>
+          <div id="opportunity-hub-content"></div>
+        </div>
+      </div>
+
+      <!-- ═══ 1, 2 & 3. TRANSPARENT FEES & ADVANCE ADJUSTMENT ═══ -->
+      <div class="dashboard-section" id="sec-fees-scholarship">
+        <div class="content-grid">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">💰 Fee Breakdown & Advance Adjustment</h3>
+              <button class="btn btn-primary btn-sm" onclick="Innovations.shareFeeSummaryWithParent(currentUser.name, currentUser.rollNo)">
+                👨‍👩‍👧 Share Fee Pass with Parent
+              </button>
+            </div>
+            <div id="transparent-fee-content"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><h3 class="card-title">🎓 Scholarship & Scheme Hub</h3></div>
+            <div id="scholarships-hub-content"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ ⏳ 10-DAY EXAM COUNTDOWN SECTION ═══ -->
+      <div class="dashboard-section" id="sec-exam-planner">
+        <div class="card" style="max-width:850px; margin:0 auto;">
+          <div class="card-header">
+            <h3 class="card-title">⏳ 10-Day Exam Countdown & Custom Study Scheduler</h3>
+            <span class="badge badge-danger" id="exam-days-badge">8 Days to Go!</span>
+          </div>
+
+          <div style="background:var(--bg-tertiary); padding:20px; border-radius:var(--radius-md); margin-bottom:24px;">
+            <h4>⚙️ Personalize Your Exam Revision Timetable:</h4>
+            <div class="content-grid" style="margin-top:12px; margin-bottom:0;">
+              <div class="form-group">
+                <label>How many hours can you study per day?</label>
+                <select class="form-select" id="custom-study-hours" onchange="updateCustomExamPlan()">
+                  <option value="2">2 Hours / Day (Light Revision)</option>
+                  <option value="4" selected>4 Hours / Day (Standard Prep)</option>
+                  <option value="6">6 Hours / Day (Intensive Prep)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Preferred Study Time Window?</label>
+                <select class="form-select" id="custom-study-rhythm" onchange="updateCustomExamPlan()">
+                  <option value="morning">🌅 Morning Person (6:00 AM Start)</option>
+                  <option value="evening" selected>🌙 Evening / Night Owl (4:00 PM Start)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div id="custom-exam-schedule-output"></div>
+        </div>
+      </div>
+
+      <!-- ═══ 🥼 PRE-LAB CHECKLIST SECTION ═══ -->
+      <div class="dashboard-section" id="sec-lab-alert">
+        <div class="card" style="max-width:700px; margin:0 auto;">
+          <div class="card-header">
+            <h3 class="card-title">🌅 Morning Pre-Lab Packing Checklist</h3>
+            <span class="badge badge-warning">Before Leaving for Campus</span>
+          </div>
+          <p style="color:var(--text-secondary); margin-bottom:var(--space-md);">
+            <strong>🚫 Lab Rule Reminder:</strong> Mobile phones are strictly prohibited inside practical labs! Pack your mandatory gear at home/hostel before heading to campus.
+          </p>
+          <div id="lab-checklist-items"></div>
+        </div>
+      </div>
+
+      <!-- ═══ ⚠️ ARREAR RISK ALERT SECTION ═══ -->
+      <div class="dashboard-section" id="sec-arrear-risk">
+        <div class="card" style="max-width:750px; margin:0 auto;">
+          <div class="card-header">
+            <h3 class="card-title">⚠️ Arrear Risk Assessment Engine</h3>
+            <span class="badge badge-danger">Attendance + Internal Marks Matrix</span>
+          </div>
+          <div id="arrear-risk-display"></div>
+        </div>
+      </div>
+
+      <!-- ═══ SCAN ATTENDANCE SECTION ═══ -->
+      <div class="dashboard-section" id="sec-scan">
+        <div class="card text-center" style="max-width:600px; margin:0 auto; padding:var(--space-2xl);">
+          <div style="font-size:4rem; margin-bottom:var(--space-md);">📷</div>
+          <h2 style="margin-bottom:var(--space-sm);">Scan Classroom QR Code</h2>
+          <p style="color:var(--text-secondary); margin-bottom:var(--space-xl);">
+            Align dynamic QR code inside frame. TOTP 10s refresh & GPS location will validate presence.
+          </p>
+          <button class="btn btn-primary btn-lg btn-full" onclick="triggerQRScan()">🚀 Open Camera Scanner</button>
+          <button class="btn btn-secondary btn-lg btn-full mt-md" onclick="simulateScan()">⚡ Demo Mode: Instant Verification</button>
+        </div>
+      </div>
+
+      <!-- ═══ TIMETABLE SECTION ═══ -->
+      <div class="dashboard-section" id="sec-timetable">
+        <div class="card">
+          <div class="card-header"><h3 class="card-title">📅 Class Timetable & Free Period Detection</h3></div>
+          <div class="day-tabs" id="student-day-tabs"></div>
+          <div id="student-timetable-container"></div>
+        </div>
+      </div>
+
+      <!-- ═══ PLANNER SECTION ═══ -->
+      <div class="dashboard-section" id="sec-planner">
+        <div class="content-grid">
+          <div class="card">
+            <div class="card-header"><h3 class="card-title">📝 My Daily Learning Planner</h3></div>
+            <div id="student-planner-container"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><h3 class="card-title">💡 Personalized Recommendations</h3></div>
+            <div id="student-study-buddy-full"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ GAMIFICATION SECTION ═══ -->
+      <div class="dashboard-section" id="sec-gamification">
+        <div class="content-grid">
+          <div class="card"><div class="card-header"><h3 class="card-title">🔥 Streak & Level Progress</h3></div><div id="gamification-streak-full"></div></div>
+          <div class="card"><div class="card-header"><h3 class="card-title">🏅 Achievement Badges</h3></div><div id="gamification-badges-full"></div></div>
+        </div>
+        <div class="card mt-lg"><div class="card-header"><h3 class="card-title">🏆 Class Leaderboard</h3></div><div id="gamification-leaderboard"></div></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- 🤖 15. FLOATING AI STUDENT ASSISTANT CHATBOT -->
+  <div class="chatbot-fab" onclick="toggleAIChatbot()">🤖</div>
+  <div class="chatbot-window" id="chatbot-window">
+    <div class="chat-header">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:1.4rem;">🤖</span>
+        <div><strong style="font-size:0.9rem;">AI Student Assistant</strong><div style="font-size:0.7rem; opacity:0.8;">Academic & Doubts Resolution</div></div>
+      </div>
+      <button style="background:none; border:none; color:white; font-size:1.2rem; cursor:pointer;" onclick="toggleAIChatbot()">✕</button>
+    </div>
+    <div class="chat-body" id="chat-messages">
+      <div class="chat-msg bot">Hello ${currentUser ? currentUser.name.split(' ')[0] : 'Student'}! 👋 I am your AI Student Assistant. Ask me about your fee status, lab checklist, exam prep, or placement advice!</div>
+    </div>
+    <div class="chat-footer">
+      <input type="text" class="form-input" id="chat-input" placeholder="Ask a doubt or question..." onkeypress="if(event.key==='Enter') sendChatMessage()">
+      <button class="btn btn-primary btn-sm" onclick="sendChatMessage()">Send</button>
+    </div>
+  </div>
+
+  <!-- QR Scanner Overlay -->
+  <div class="scanner-overlay" id="scanner-overlay">
+    <div class="scanner-box">
+      <h3>Scan Teacher's QR Code</h3>
+      <div id="qr-reader"></div>
+      <button class="btn btn-danger btn-full" id="scanner-close">Cancel Scan</button>
+    </div>
+  </div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/qr.js"></script>
+  <script src="js/timetable.js"></script>
+  <script src="js/planner.js"></script>
+  <script src="js/gamification.js"></script>
+  <script src="js/analytics.js"></script>
+  <script src="js/innovations.js"></script>
+  <script>
+    let currentUser;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      currentUser = App.requireAuth('student');
+      if (!currentUser) return;
+
+      App.initSidebar(currentUser);
+      renderExamCountdownBanner();
+      renderLabDayAlert();
+      renderStudentDashboard();
+      renderTransparentFees();
+      renderInfoTab('notes');
+      renderPlacementHub();
+      renderArrearRisk();
+      updateCustomExamPlan();
+    });
+
+    function switchSection(sectionId) {
+      App.setActiveNav(sectionId);
+      if (sectionId === 'sec-info-hub') renderInfoTab('notes');
+      if (sectionId === 'sec-placement-hub') renderPlacementHub();
+      if (sectionId === 'sec-fees-scholarship') renderTransparentFees();
+      if (sectionId === 'sec-lab-alert') renderLabChecklist();
+      if (sectionId === 'sec-arrear-risk') renderArrearRisk();
+      if (sectionId === 'sec-exam-planner') updateCustomExamPlan();
+      if (sectionId === 'sec-timetable') loadTimetable();
+      if (sectionId === 'sec-planner') loadPlanner();
+      if (sectionId === 'sec-gamification') loadGamification();
+    }
+
+    // ─── 1, 2 & 3. Transparent Fee & Advance Adjustment ───
+    function renderTransparentFees() {
+      const fee = Innovations.getFeeBreakdown(currentUser.id);
+      document.getElementById('transparent-fee-content').innerHTML = `
+        <div style="padding:16px; background:var(--bg-tertiary); border-radius:var(--radius-md); margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between;"><span>Tuition Fee:</span><strong>₹${fee.tuitionFee.toLocaleString()}</strong></div>
+          <div style="display:flex; justify-content:space-between; margin-top:4px;"><span>Lab & Library Fee:</span><strong>₹${(fee.labFee + fee.libraryFee).toLocaleString()}</strong></div>
+          <div style="display:flex; justify-content:space-between; margin-top:4px;"><span>Exam Fee:</span><strong>₹${fee.examFee.toLocaleString()}</strong></div>
+          <div style="border-top:1px solid var(--border-color); margin-top:8px; padding-top:8px; display:flex; justify-content:space-between; font-weight:700;">
+            <span>Gross Total Fee:</span><span>₹${fee.totalFee.toLocaleString()}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; color:var(--success-500); font-weight:700; margin-top:4px;">
+            <span>🔄 Previous Year Advance Adjusted:</span><span>-₹${fee.previousYearAdvance.toLocaleString()}</span>
+          </div>
+          <div style="border-top:2px solid var(--primary-500); margin-top:8px; padding-top:8px; display:flex; justify-content:space-between; font-size:1.2rem; font-weight:900;">
+            <span>Net Payable Balance:</span><span style="color:var(--success-500)">₹0 (FULL PAID)</span>
+          </div>
+        </div>
+      `;
+
+      // Scholarship Hub
+      document.getElementById('scholarships-hub-content').innerHTML = Innovations.SCHOLARSHIPS_HUB.map(s => `
+        <div style="padding:12px; background:var(--bg-tertiary); border-radius:var(--radius-md); margin-bottom:10px;">
+          <div style="display:flex; justify-content:space-between;">
+            <strong>${s.name}</strong>
+            <span class="badge badge-success">${s.status}</span>
+          </div>
+          <div style="font-size:0.82rem; color:var(--cyan-500); font-weight:700; margin-top:2px;">Grant: ${s.amount}</div>
+          <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:4px;">Eligibility: ${s.eligibility}</div>
+        </div>
+      `).join('');
+    }
+
+    // ─── 4 & 5. Info Hub & Directory ───
+    function showInfoTab(tab, e) {
+      document.querySelectorAll('.tab-nav .tab-btn').forEach(b => b.classList.remove('active'));
+      if (e) e.target.classList.add('active');
+      renderInfoTab(tab);
+    }
+
+    function renderInfoTab(tab) {
+      const container = document.getElementById('info-hub-content');
+
+      if (tab === 'notes') {
+        container.innerHTML = Innovations.INFO_HUB.notes.map(n => `
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; background:var(--bg-tertiary); border-radius:var(--radius-md); margin-bottom:8px;">
+            <div><strong>📚 ${n.title}</strong><div style="font-size:0.78rem; color:var(--text-secondary);">${n.subject} • Uploaded by ${n.author} (${n.date})</div></div>
+            <button class="btn btn-primary btn-sm">📥 Download PDF</button>
+          </div>
+        `).join('');
+      } else if (tab === 'circulars') {
+        container.innerHTML = Innovations.INFO_HUB.circulars.map(c => `
+          <div style="padding:12px; background:var(--bg-tertiary); border-radius:var(--radius-md); margin-bottom:8px; border-left:4px solid var(--primary-500);">
+            <strong>${c.title}</strong>
+            <div style="font-size:0.78rem; color:var(--text-secondary); margin-top:2px;">Issued by ${c.issuer} on ${c.date}</div>
+          </div>
+        `).join('');
+      } else if (tab === 'tasks') {
+        container.innerHTML = Innovations.TASKS_TRACKER.map(t => `
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; background:var(--bg-tertiary); border-radius:var(--radius-md); margin-bottom:8px;">
+            <div><strong>📋 ${t.title}</strong><div style="font-size:0.78rem; color:var(--text-secondary);">${t.subject} • Deadline: ${t.deadline}</div></div>
+            <span class="badge ${t.status === 'Completed' ? 'badge-success' : 'badge-warning'}">${t.status}</span>
+          </div>
+        `).join('');
+      } else if (tab === 'directory') {
+        container.innerHTML = Innovations.COLLEGE_DIRECTORY.map(d => `
+          <div style="padding:12px; background:var(--bg-tertiary); border-radius:var(--radius-md); margin-bottom:8px;">
+            <strong>🏛️ ${d.role} — ${d.name}</strong>
+            <div style="font-size:0.78rem; color:var(--text-secondary); margin-top:2px;">📍 ${d.office} • 📞 ${d.phone} • ✉️ ${d.email}</div>
+          </div>
+        `).join('');
+      }
+    }
+
+    // ─── 11, 12, 13 & 14. Placement & Skill Hub ───
+    function renderPlacementHub() {
+      // Skill Roadmap
+      document.getElementById('skill-roadmap-content').innerHTML = Object.entries(Innovations.SKILL_ROADMAP).map(([yr, data]) => `
+        <div style="padding:10px; background:var(--bg-tertiary); border-radius:var(--radius-md); margin-bottom:8px;">
+          <strong style="color:var(--primary-500);">${yr}: ${data.focus}</strong>
+          <div style="font-size:0.78rem; margin-top:4px;">Skills: ${data.skills.join(' • ')}</div>
+        </div>
+      `).join('');
+
+      // Senior Advice
+      document.getElementById('senior-advice-content').innerHTML = Innovations.SENIOR_KNOWLEDGE.map(s => `
+        <div style="padding:10px; background:var(--bg-tertiary); border-radius:var(--radius-md); margin-bottom:8px;">
+          <strong>💡 ${s.title}</strong>
+          <div style="font-size:0.78rem; color:var(--text-secondary); margin-top:2px;">By ${s.senior}: "${s.advice}"</div>
+        </div>
+      `).join('');
+
+      // Placement Qs
+      document.getElementById('placement-questions-content').innerHTML = Innovations.PLACEMENT_HUB.map(p => `
+        <div style="padding:12px; background:var(--bg-tertiary); border-radius:var(--radius-md); margin-bottom:8px;">
+          <strong>💼 ${p.company} — ${p.topic}</strong>
+          <div style="font-size:0.78rem; margin-top:4px;">Key Questions: ${p.questions.join(', ')}</div>
+        </div>
+      `).join('');
+
+      // Opportunity Hub
+      document.getElementById('opportunity-hub-content').innerHTML = Innovations.OPPORTUNITY_HUB.map(o => `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; background:var(--bg-tertiary); border-radius:var(--radius-md); margin-bottom:8px;">
+          <div><strong>🏆 ${o.title}</strong><div style="font-size:0.78rem; color:var(--text-secondary);">${o.type} • Prize: ${o.prize || o.stipend || o.cert}</div></div>
+          <button class="btn btn-primary btn-sm">Apply Now →</button>
+        </div>
+      `).join('');
+    }
+
+    // ─── 15. Floating AI Chatbot Assistant ───
+    function toggleAIChatbot() {
+      document.getElementById('chatbot-window').classList.toggle('active');
+    }
+
+    function sendChatMessage() {
+      const input = document.getElementById('chat-input');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const body = document.getElementById('chat-messages');
+      body.innerHTML += `<div class="chat-msg user">${text}</div>`;
+      input.value = '';
+
+      setTimeout(() => {
+        const reply = Innovations.queryAIAssistant(text);
+        body.innerHTML += `<div class="chat-msg bot">${reply}</div>`;
+        body.scrollTop = body.scrollHeight;
+      }, 500);
+    }
+
+    function renderExamCountdownBanner() {
+      const countdown = Planner.getExamCountdownAlert();
+      document.getElementById('exam-countdown-banner').innerHTML = `
+        <div class="risk-alert danger" style="display:flex; justify-content:space-between; align-items:center;">
+          <div><strong>${countdown.message}</strong><div style="font-size:0.82rem; margin-top:4px;">Custom schedule active.</div></div>
+          <button class="btn btn-danger btn-sm" onclick="switchSection('sec-exam-planner')">Open 10-Day Plan →</button>
+        </div>
+      `;
+    }
+
+    function updateCustomExamPlan() {
+      const hours = parseInt(document.getElementById('custom-study-hours')?.value || 4);
+      const rhythm = document.getElementById('custom-study-rhythm')?.value || 'evening';
+
+      const planData = Planner.generateCustomExamPlan(hours, rhythm);
+      document.getElementById('custom-exam-schedule-output').innerHTML = `
+        <div style="margin-bottom:20px;">
+          <h4>📅 Upcoming 10-Day Semester Exam Timetable:</h4>
+          <div class="table-container" style="margin-top:8px;">
+            <table class="data-table">
+              <thead><tr><th>Subject</th><th>Exam Date</th><th>Days to Go</th><th>Arrear Risk Priority</th></tr></thead>
+              <tbody>
+                ${planData.exams.map(e => `
+                  <tr>
+                    <td><strong>${e.subject}</strong></td>
+                    <td>${Utils.formatDate(e.date)}</td>
+                    <td><strong style="color:var(--danger-500)">⏳ ${e.daysToGo} Days</strong></td>
+                    <td><span class="badge ${e.priority.includes('Critical') ? 'badge-danger' : 'badge-primary'}">${e.priority}</span></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <h4>🧠 Auto-Generated Daily Schedule for ${hours} Hours/Day:</h4>
+        <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+          ${planData.allocatedSlots.map(s => `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:var(--bg-tertiary); border-radius:var(--radius-md); border-left:4px solid var(--primary-500);">
+              <span style="font-family:var(--font-mono); font-weight:700; color:var(--primary-500);">${s.slot}</span>
+              <span style="font-weight:600; font-size:0.9rem;">${s.activity}</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    function renderLabDayAlert() {
+      const alertInfo = Planner.checkLabDayAlerts(currentUser.classId);
+      document.getElementById('lab-day-alert-banner').innerHTML = alertInfo.hasLab ? `
+        <div class="risk-alert warning" style="display:flex; justify-content:space-between; align-items:center;">
+          <div><strong>${alertInfo.message}</strong><div style="font-size:0.82rem; margin-top:4px;">${alertInfo.subtext}</div></div>
+          <button class="btn btn-warning btn-sm" onclick="switchSection('sec-lab-alert')">Pack Bag Now →</button>
+        </div>
+      ` : '<div style="padding:10px 16px; background:rgba(13, 148, 136, 0.08); border-radius:var(--radius-md); font-size:0.82rem; color:var(--text-secondary);">ℹ️ No practical labs scheduled today.</div>';
+    }
+
+    function renderLabChecklist() {
+      document.getElementById('lab-checklist-items').innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div class="planner-task completed" style="cursor:pointer;"><div class="task-checkbox">✓</div><div class="task-info"><div class="task-name">🥼 Lab Coat (Mandatory for entry)</div></div></div>
+          <div class="planner-task completed" style="cursor:pointer;"><div class="task-checkbox">✓</div><div class="task-info"><div class="task-name">📖 Practical Observation Notebook</div></div></div>
+          <div class="planner-task" style="cursor:pointer;"><div class="task-checkbox"></div><div class="task-info"><div class="task-name">📐 Completed Experiment Record Work</div></div></div>
+        </div>
+      `;
+    }
+
+    function renderArrearRisk() {
+      const risk = Planner.calculateArrearRisk(currentUser.id);
+      document.getElementById('arrear-risk-display').innerHTML = `
+        <div style="padding:20px; background:var(--bg-tertiary); border-radius:var(--radius-md); margin-bottom:20px;">
+          <h3 style="color:${risk.riskLevel === 'critical' ? 'var(--danger-500)' : 'var(--success-500)'}">${risk.title}</h3>
+          <div style="display:flex; gap:24px; margin-top:12px;">
+            <div><div style="font-size:1.5rem; font-weight:800;">${risk.attendancePct}%</div><div style="font-size:0.75rem;">Attendance</div></div>
+            <div><div style="font-size:1.5rem; font-weight:800;">${risk.avgInternal}/100</div><div style="font-size:0.75rem;">Avg Internal Mark</div></div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderStudentDashboard() {
+      const risk = Utils.calculateRiskScore(currentUser.id);
+      document.getElementById('risk-score-alert').className = `risk-alert ${risk.level}`;
+      document.getElementById('risk-score-alert').innerHTML = `<span class="risk-icon">🌟</span><span class="risk-text">${risk.message}</span>`;
+
+      const percent = Utils.calcAttendancePercent(currentUser.id, currentUser.classId);
+      document.getElementById('ring-percent').textContent = `${percent}%`;
+      const strokeDashoffset = 427 - (427 * percent) / 100;
+      setTimeout(() => { document.getElementById('ring-circle').style.strokeDashoffset = strokeDashoffset; }, 200);
+
+      Gamification.renderStreak('home-streak-card', currentUser.id);
+      document.getElementById('next-class-card').innerHTML = `<div class="stat-icon">🎉</div><div class="stat-value">Done!</div><div class="stat-label">No more classes today</div>`;
+      const gam = Gamification.getStudentGamification(currentUser.id);
+      document.getElementById('xp-summary-card').innerHTML = `<div class="stat-icon">🏆</div><div class="stat-value">${gam.xp} XP</div><div class="stat-label">${gam.badges.length} Badges Unlocked</div>`;
+
+      Timetable.renderTimetable('today-timetable-preview', currentUser.classId);
+      Planner.renderStudyBuddy('study-buddy-preview', currentUser.id, currentUser.classId);
+    }
+
+    function triggerQRScan() {
+      QRSystem.startScanner(
+        (record) => { renderStudentDashboard(); switchSection('sec-student-home'); },
+        (err) => { console.warn('QR scan error:', err); }
+      );
+    }
+
+    function simulateScan() {
+      QRSystem.simulateDemoScan(
+        (record) => { renderStudentDashboard(); switchSection('sec-student-home'); },
+        (err) => { Utils.showToast(err || 'Failed to simulate scan', 'error'); }
+      );
+    }
+
+    function loadTimetable() {
+      Timetable.renderDayTabs('student-day-tabs', currentUser.classId, 'student-timetable-container');
+      Timetable.renderTimetable('student-timetable-container', currentUser.classId);
+    }
+
+    function loadPlanner() {
+      Planner.renderPlanner('student-planner-container', currentUser.id, currentUser.classId);
+      Planner.renderStudyBuddy('student-study-buddy-full', currentUser.id, currentUser.classId);
+    }
+
+    function loadGamification() {
+      Gamification.renderStreak('gamification-streak-full', currentUser.id);
+      Gamification.renderBadges('gamification-badges-full', currentUser.id);
+      Gamification.renderLeaderboard('gamification-leaderboard', currentUser.classId);
+    }
+  </script>
+</body>
+</html>

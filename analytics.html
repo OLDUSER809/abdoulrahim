@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="EduTrack Analytics Dashboard — Class statistics, daily trends, student percentages, class summaries">
+  <title>EduTrack — Analytics Dashboard</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <!-- jsPDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- SheetJS -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <div class="dashboard">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">📚 EduTrack</div>
+        <div class="sidebar-role">Analytics Portal</div>
+      </div>
+      <ul class="sidebar-nav">
+        <li><a href="#" class="active" id="nav-back-link"><span class="nav-icon">⬅️</span><span>Back to Dashboard</span></a></li>
+        <li><a href="#sec-overview"><span class="nav-icon">📈</span><span>Overview</span></a></li>
+        <li><a href="#sec-trends"><span class="nav-icon">📅</span><span>Daily Trends</span></a></li>
+        <li><a href="#sec-classes-summary"><span class="nav-icon">🏫</span><span>Class Summary</span></a></li>
+        <li><a href="#sec-students-list"><span class="nav-icon">👥</span><span>Student Roster</span></a></li>
+      </ul>
+      <div class="sidebar-footer">
+        <button class="btn btn-primary btn-sm btn-full" onclick="exportPDF()">📄 Download PDF Report</button>
+        <button class="btn btn-success btn-sm btn-full mt-sm" onclick="exportExcel()">📊 Download Excel</button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <div class="top-bar">
+        <div class="top-bar-left">
+          <h1>Attendance Analytics Dashboard</h1>
+          <p>Comprehensive statistical breakdown & predictive insights</p>
+        </div>
+        <div class="top-bar-right">
+          <button class="theme-toggle" onclick="App.toggleTheme()">🌙</button>
+        </div>
+      </div>
+
+      <!-- Overview Cards -->
+      <div class="stats-grid stagger" id="analytics-stats-grid"></div>
+
+      <!-- Charts Section -->
+      <div class="content-grid" id="sec-overview">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">🥧 Overall Attendance Breakdown</h3>
+          </div>
+          <div class="chart-container">
+            <canvas id="main-pie-chart"></canvas>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">📊 Class-wise Average Attendance</h3>
+          </div>
+          <div class="chart-container">
+            <canvas id="main-bar-chart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trend Analysis -->
+      <div class="card mt-lg" id="sec-trends">
+        <div class="card-header">
+          <h3 class="card-title">📅 30-Day Attendance Trend Analysis</h3>
+        </div>
+        <div class="chart-container tall">
+          <canvas id="main-trend-chart"></canvas>
+        </div>
+      </div>
+
+      <!-- Class Summaries Cards -->
+      <div class="mt-xl" id="sec-classes-summary">
+        <h2 class="mb-lg">🏫 Class Summaries</h2>
+        <div class="stats-grid" id="class-summary-cards"></div>
+      </div>
+
+      <!-- Student Attendance Roster -->
+      <div class="card mt-xl" id="sec-students-list">
+        <div class="card-header">
+          <h3 class="card-title">👥 Student Attendance Performance Roster</h3>
+          <p class="card-subtitle">Real-time attendance % with early warning risk detection</p>
+        </div>
+        <div id="student-roster-table"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/utils.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/analytics.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      App.initTheme();
+      const session = App.getSession();
+      
+      const backLink = document.getElementById('nav-back-link');
+      if (session) {
+        backLink.href = session.role === 'teacher' ? 'teacher.html' : 'student.html';
+      } else {
+        backLink.href = 'index.html';
+      }
+
+      renderAnalyticsPage();
+    });
+
+    function renderAnalyticsPage() {
+      const stats = Analytics.getOverallStats();
+      document.getElementById('analytics-stats-grid').innerHTML = `
+        <div class="stat-card purple">
+          <div class="stat-icon">🎓</div>
+          <div class="stat-value">${stats.totalStudents}</div>
+          <div class="stat-label">Total Enrolled Students</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon">📊</div>
+          <div class="stat-value">${stats.overallPercentage}%</div>
+          <div class="stat-label">Average Attendance Rate</div>
+        </div>
+        <div class="stat-card cyan">
+          <div class="stat-icon">📋</div>
+          <div class="stat-value">${stats.totalSessions}</div>
+          <div class="stat-label">Class Sessions Conducted</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-icon">⚠️</div>
+          <div class="stat-value">${stats.absentCount}</div>
+          <div class="stat-label">Total Absent Logs</div>
+        </div>
+      `;
+
+      Analytics.renderAttendancePieChart('main-pie-chart', stats);
+      Analytics.renderClassBarChart('main-bar-chart');
+
+      const trend = Analytics.getDailyTrend(30);
+      Analytics.renderTrendChart('main-trend-chart', trend);
+
+      // Class summary cards
+      const classes = Analytics.getClassWiseSummary();
+      document.getElementById('class-summary-cards').innerHTML = classes.map(c => `
+        <div class="stat-card ${c.avgAttendance >= 85 ? 'green' : c.avgAttendance >= 75 ? 'orange' : 'red'}">
+          <div style="font-size:1.2rem; font-weight:800;">${c.name}</div>
+          <div style="font-size:0.82rem; color:var(--text-secondary); margin-bottom:var(--space-md);">${c.subject}</div>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-size:1.5rem; font-weight:900;">${c.avgAttendance}%</div>
+              <div style="font-size:0.75rem; color:var(--text-tertiary);">Avg Attendance</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:0.9rem; font-weight:700;">${c.totalStudents} Students</div>
+              <div style="font-size:0.75rem; color:var(--text-tertiary);">${c.totalSessions} Sessions</div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      Analytics.renderStudentAttendanceTable('student-roster-table');
+    }
+
+    function exportPDF() {
+      const students = Analytics.getStudentWiseAttendance();
+      const headers = ['Name', 'Roll No', 'Present', 'Absent', 'Attendance %', 'Status'];
+      const rows = students.map(s => [s.name, s.rollNo || '-', s.present, s.absent, s.percentage + '%', s.risk.level]);
+      Utils.exportToPDF('EduTrack Attendance Analytics Report', headers, rows, 'edutrack_analytics_report.pdf');
+    }
+
+    function exportExcel() {
+      const students = Analytics.getStudentWiseAttendance();
+      const headers = ['Name', 'Roll No', 'Present', 'Absent', 'Total', 'Attendance %', 'Risk Level'];
+      const rows = students.map(s => [s.name, s.rollNo || '-', s.present, s.absent, s.total, s.percentage, s.risk.level]);
+      Utils.exportToExcel('EduTrack Analytics', headers, rows, 'edutrack_analytics_report.xlsx');
+    }
+  </script>
+</body>
+</html>

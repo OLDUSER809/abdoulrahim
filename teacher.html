@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Teacher Dashboard — Generate QR sessions, manage attendance, view analytics">
+  <title>EduTrack — Teacher Dashboard</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👨‍🏫</text></svg>">
+  <!-- QR Code Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <!-- jsPDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- SheetJS -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <div class="dashboard">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">📚 EduTrack</div>
+        <div class="sidebar-role">Teacher Portal</div>
+      </div>
+      <ul class="sidebar-nav">
+        <li><a href="#" data-section="sec-dashboard" class="active" onclick="switchSection('sec-dashboard')"><span class="nav-icon">📊</span><span>Dashboard</span></a></li>
+        <li><a href="#" data-section="sec-qr" onclick="switchSection('sec-qr')"><span class="nav-icon">📱</span><span>Generate QR</span></a></li>
+        <li><a href="#" data-section="sec-attendance" onclick="switchSection('sec-attendance')"><span class="nav-icon">📋</span><span>Attendance</span></a></li>
+        <li><a href="#" data-section="sec-classes" onclick="switchSection('sec-classes')"><span class="nav-icon">🏫</span><span>My Classes</span></a></li>
+        <li><a href="#" data-section="sec-analytics" onclick="switchSection('sec-analytics')"><span class="nav-icon">📈</span><span>Analytics</span></a></li>
+        <li><a href="#" data-section="sec-export" onclick="switchSection('sec-export')"><span class="nav-icon">📥</span><span>Export Reports</span></a></li>
+        <li><a href="analytics.html"><span class="nav-icon">🔬</span><span>Full Analytics</span></a></li>
+      </ul>
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="sidebar-avatar" id="sidebar-avatar">PS</div>
+          <div class="sidebar-user-info">
+            <div class="name" id="user-name">Prof. Sharma</div>
+            <div class="email" id="user-email">teacher@edu.in</div>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm btn-full mt-md" onclick="App.logout()" style="color:rgba(255,255,255,0.6);">🚪 Sign Out</button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <div class="top-bar">
+        <div class="top-bar-left">
+          <h1 id="page-title">Dashboard</h1>
+          <p id="page-subtitle">Welcome back! Here's today's overview.</p>
+        </div>
+        <div class="top-bar-right">
+          <button class="theme-toggle" onclick="App.toggleTheme()">🌙</button>
+        </div>
+      </div>
+
+      <!-- ═══ DASHBOARD SECTION ═══ -->
+      <div class="dashboard-section active" id="sec-dashboard">
+        <!-- Stats -->
+        <div class="stats-grid stagger" id="stats-grid"></div>
+
+        <div class="content-grid">
+          <!-- Today's Quick Actions -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">⚡ Quick Actions</h3>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:var(--space-sm);">
+              <button class="btn btn-primary btn-full" onclick="switchSection('sec-qr')">📱 Start QR Session</button>
+              <button class="btn btn-secondary btn-full" onclick="switchSection('sec-attendance')">📋 View Attendance</button>
+              <button class="btn btn-secondary btn-full" onclick="switchSection('sec-analytics')">📈 View Analytics</button>
+              <button class="btn btn-secondary btn-full" onclick="switchSection('sec-export')">📥 Export Reports</button>
+            </div>
+          </div>
+
+          <!-- Recent Activity -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">🕐 Recent Sessions</h3>
+            </div>
+            <div id="recent-sessions"></div>
+          </div>
+        </div>
+
+        <!-- Trend Chart -->
+        <div class="card mt-lg">
+          <div class="card-header">
+            <h3 class="card-title">📈 Attendance Trend (Last 15 Days)</h3>
+          </div>
+          <div class="chart-container">
+            <canvas id="dashboard-trend-chart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ QR GENERATION SECTION ═══ -->
+      <div class="dashboard-section" id="sec-qr">
+        <div class="content-grid">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">📱 Generate Attendance QR</h3>
+              <span class="badge badge-info">Dynamic TOTP — Refreshes every 10s</span>
+            </div>
+            <div class="form-group">
+              <label>Select Class</label>
+              <select class="form-select" id="qr-class-select">
+                <option value="">Choose a class...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Subject / Topic</label>
+              <input type="text" class="form-input" id="qr-subject" placeholder="e.g. Data Structures - Lecture 12">
+            </div>
+            <div style="display:flex; gap:var(--space-sm);">
+              <button class="btn btn-primary flex-1" id="start-session-btn" onclick="startQRSession()">▶ Start Session</button>
+              <button class="btn btn-danger flex-1 hidden" id="stop-session-btn" onclick="stopQRSession()">⏹ Stop Session</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">🔐 QR Code</h3>
+              <p class="card-subtitle">Students scan this to mark attendance</p>
+            </div>
+            <div id="qr-display-area">
+              <div class="empty-state">
+                <div class="empty-icon">📱</div>
+                <div class="empty-text">Start a session to generate QR code</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Real-time Attendance Grid -->
+        <div class="card mt-lg" id="realtime-attendance-card" style="display:none;">
+          <div class="card-header">
+            <h3 class="card-title">👥 Real-Time Attendance</h3>
+            <span class="badge badge-success" id="attendance-count">0 / 0</span>
+          </div>
+          <div class="attendance-grid" id="realtime-grid"></div>
+        </div>
+      </div>
+
+      <!-- ═══ ATTENDANCE RECORDS SECTION ═══ -->
+      <div class="dashboard-section" id="sec-attendance">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">📋 Attendance Records</h3>
+            <div style="display:flex; gap:var(--space-sm);">
+              <select class="form-select" id="att-class-filter" style="width:180px;" onchange="renderAttendanceHistory()">
+                <option value="">All Classes</option>
+              </select>
+              <input type="date" class="form-input" id="att-date-filter" style="width:180px;" onchange="renderAttendanceHistory()">
+            </div>
+          </div>
+          <div id="attendance-history-table"></div>
+        </div>
+      </div>
+
+      <!-- ═══ MY CLASSES SECTION ═══ -->
+      <div class="dashboard-section" id="sec-classes">
+        <div class="stats-grid" id="classes-grid"></div>
+      </div>
+
+      <!-- ═══ ANALYTICS SECTION ═══ -->
+      <div class="dashboard-section" id="sec-analytics">
+        <div class="content-grid">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">🥧 Attendance Distribution</h3>
+            </div>
+            <div class="chart-container small">
+              <canvas id="analytics-pie-chart"></canvas>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">📊 Class-wise Attendance</h3>
+            </div>
+            <div class="chart-container small">
+              <canvas id="analytics-bar-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mt-lg">
+          <div class="card-header">
+            <h3 class="card-title">👥 Student-wise Attendance</h3>
+            <p class="card-subtitle">Sorted by attendance percentage (lowest first)</p>
+          </div>
+          <div id="student-attendance-table"></div>
+        </div>
+      </div>
+
+      <!-- ═══ EXPORT SECTION ═══ -->
+      <div class="dashboard-section" id="sec-export">
+        <div class="content-grid">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">📄 Export to PDF</h3>
+            </div>
+            <p style="color:var(--text-secondary); font-size:0.88rem; margin-bottom:var(--space-lg);">
+              Generate a formatted PDF report of attendance records.
+            </p>
+            <div class="form-group">
+              <label>Select Class</label>
+              <select class="form-select" id="export-class-select">
+                <option value="">All Classes</option>
+              </select>
+            </div>
+            <button class="btn btn-primary btn-full" onclick="exportPDF()">📄 Download PDF Report</button>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">📊 Export to Excel</h3>
+            </div>
+            <p style="color:var(--text-secondary); font-size:0.88rem; margin-bottom:var(--space-lg);">
+              Download attendance data as an Excel spreadsheet.
+            </p>
+            <div class="form-group">
+              <label>Select Class</label>
+              <select class="form-select" id="export-excel-class">
+                <option value="">All Classes</option>
+              </select>
+            </div>
+            <button class="btn btn-success btn-full" onclick="exportExcel()">📊 Download Excel Report</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/utils.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/qr.js"></script>
+  <script src="js/analytics.js"></script>
+  <script>
+    let currentUser;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      currentUser = App.requireAuth('teacher');
+      if (!currentUser) return;
+
+      App.initSidebar(currentUser);
+      populateClassSelects();
+      renderDashboard();
+    });
+
+    function switchSection(sectionId) {
+      App.setActiveNav(sectionId);
+      const titles = {
+        'sec-dashboard': ['Dashboard', "Welcome back! Here's today's overview."],
+        'sec-qr': ['Generate QR Code', 'Start a live attendance session with dynamic QR'],
+        'sec-attendance': ['Attendance Records', 'View and filter historical attendance data'],
+        'sec-classes': ['My Classes', 'Manage your assigned classes'],
+        'sec-analytics': ['Analytics', 'Deep dive into attendance patterns'],
+        'sec-export': ['Export Reports', 'Download attendance reports in PDF or Excel']
+      };
+      const [title, subtitle] = titles[sectionId] || ['Dashboard', ''];
+      document.getElementById('page-title').textContent = title;
+      document.getElementById('page-subtitle').textContent = subtitle;
+
+      // Load section data
+      if (sectionId === 'sec-analytics') loadAnalytics();
+      if (sectionId === 'sec-attendance') renderAttendanceHistory();
+      if (sectionId === 'sec-classes') renderClasses();
+      if (sectionId === 'sec-dashboard') renderDashboard();
+    }
+
+    function populateClassSelects() {
+      const classes = Utils.getStore('ih01_classes').filter(c => c.teacherId === currentUser.id);
+      const selects = ['qr-class-select', 'att-class-filter', 'export-class-select', 'export-excel-class'];
+      selects.forEach(id => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        classes.forEach(cls => {
+          const opt = document.createElement('option');
+          opt.value = cls.id;
+          opt.textContent = cls.name;
+          sel.appendChild(opt);
+        });
+      });
+    }
+
+    // ─── Dashboard ───
+    function renderDashboard() {
+      const stats = Analytics.getOverallStats();
+      document.getElementById('stats-grid').innerHTML = `
+        <div class="stat-card purple">
+          <div class="stat-icon">👥</div>
+          <div class="stat-value">${stats.totalStudents}</div>
+          <div class="stat-label">Total Students</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon">✅</div>
+          <div class="stat-value">${stats.overallPercentage}%</div>
+          <div class="stat-label">Overall Attendance</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-icon">📅</div>
+          <div class="stat-value">${stats.totalSessions}</div>
+          <div class="stat-label">Total Sessions</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-icon">⚠️</div>
+          <div class="stat-value">${stats.absentCount}</div>
+          <div class="stat-label">Total Absences</div>
+        </div>
+      `;
+
+      // Recent sessions
+      const sessions = Utils.getStore('ih01_sessions')
+        .filter(s => {
+          const classes = Utils.getStore('ih01_classes').filter(c => c.teacherId === currentUser.id);
+          return classes.some(c => c.id === s.classId);
+        })
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 5);
+
+      const classes = Utils.getStore('ih01_classes');
+      document.getElementById('recent-sessions').innerHTML = sessions.length ? sessions.map(s => {
+        const cls = classes.find(c => c.id === s.classId);
+        const att = Utils.getStore('ih01_attendance').filter(a => a.sessionId === s.id);
+        const present = att.filter(a => a.status === 'present' || a.status === 'late').length;
+        return `
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border-light);">
+            <div>
+              <div style="font-weight:600; font-size:0.88rem;">${s.subject || 'Session'}</div>
+              <div style="font-size:0.78rem; color:var(--text-secondary);">${cls ? cls.name : ''} • ${Utils.formatDate(s.date)}</div>
+            </div>
+            <span class="badge ${s.active ? 'badge-success' : 'badge-primary'}">${s.active ? '● Live' : `${present}/${att.length}`}</span>
+          </div>
+        `;
+      }).join('') : '<div class="empty-state"><div class="empty-text">No sessions yet</div></div>';
+
+      // Trend chart
+      const trend = Analytics.getDailyTrend(15);
+      Analytics.renderTrendChart('dashboard-trend-chart', trend);
+    }
+
+    // ─── QR Session ───
+    function startQRSession() {
+      const classId = document.getElementById('qr-class-select').value;
+      const subject = document.getElementById('qr-subject').value;
+
+      if (!classId) {
+        Utils.showToast('Please select a class', 'warning');
+        return;
+      }
+
+      const session = QRSystem.startSession(classId, subject || 'General');
+      QRSystem.renderDynamicQR('qr-display-area', session);
+
+      document.getElementById('start-session-btn').classList.add('hidden');
+      document.getElementById('stop-session-btn').classList.remove('hidden');
+
+      // Show realtime attendance grid
+      const attCard = document.getElementById('realtime-attendance-card');
+      attCard.style.display = 'block';
+      renderRealtimeGrid(classId, session.id);
+
+      // Auto-refresh realtime grid
+      window._realtimeInterval = setInterval(() => renderRealtimeGrid(classId, session.id), 3000);
+
+      Utils.showToast('QR session started! Students can now scan.', 'success');
+    }
+
+    function stopQRSession() {
+      QRSystem.stopSession();
+      clearInterval(window._realtimeInterval);
+
+      document.getElementById('start-session-btn').classList.remove('hidden');
+      document.getElementById('stop-session-btn').classList.add('hidden');
+      document.getElementById('qr-display-area').innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">✅</div>
+          <div class="empty-text">Session ended successfully</div>
+        </div>
+      `;
+
+      Utils.showToast('Session ended', 'info');
+    }
+
+    function renderRealtimeGrid(classId, sessionId) {
+      const students = Utils.getStore('ih01_users').filter(u => u.role === 'student' && u.classId === classId);
+      const attendance = Utils.getStore('ih01_attendance').filter(a => a.sessionId === sessionId);
+
+      const present = attendance.filter(a => a.status === 'present' || a.status === 'late').length;
+      document.getElementById('attendance-count').textContent = `${present} / ${students.length}`;
+
+      document.getElementById('realtime-grid').innerHTML = students.map(s => {
+        const att = attendance.find(a => a.studentId === s.id);
+        const status = att ? att.status : 'absent';
+        const statusLabel = att ? (att.status === 'late' ? '⏰ Late' : '✅ Present') : '❌ Waiting...';
+        return `
+          <div class="student-attendance-card ${status}">
+            <div class="student-avatar">${s.avatar}</div>
+            <div class="student-name">${s.name}</div>
+            <div class="student-status" style="color:${status === 'present' ? 'var(--success-500)' : status === 'late' ? 'var(--warning-500)' : 'var(--danger-500)'}">
+              ${statusLabel}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ─── Attendance History ───
+    function renderAttendanceHistory() {
+      const classFilter = document.getElementById('att-class-filter').value;
+      const dateFilter = document.getElementById('att-date-filter').value;
+
+      let sessions = Utils.getStore('ih01_sessions');
+      const teacherClasses = Utils.getStore('ih01_classes').filter(c => c.teacherId === currentUser.id).map(c => c.id);
+      sessions = sessions.filter(s => teacherClasses.includes(s.classId));
+
+      if (classFilter) sessions = sessions.filter(s => s.classId === classFilter);
+      if (dateFilter) sessions = sessions.filter(s => s.date === dateFilter);
+
+      sessions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      const attendance = Utils.getStore('ih01_attendance');
+      const users = Utils.getStore('ih01_users');
+      const classes = Utils.getStore('ih01_classes');
+
+      // Build flat attendance records
+      const records = [];
+      sessions.forEach(session => {
+        const cls = classes.find(c => c.id === session.classId);
+        const sessionAtt = attendance.filter(a => a.sessionId === session.id);
+        sessionAtt.forEach(att => {
+          const student = users.find(u => u.id === att.studentId);
+          records.push({
+            date: session.date,
+            class: cls ? cls.name : '',
+            subject: session.subject || '-',
+            student: student ? student.name : 'Unknown',
+            rollNo: student ? student.rollNo : '-',
+            status: att.status,
+            time: Utils.formatTime(att.timestamp),
+            geoVerified: att.geoVerified
+          });
+        });
+      });
+
+      document.getElementById('attendance-history-table').innerHTML = records.length ? `
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Class</th>
+                <th>Subject</th>
+                <th>Student</th>
+                <th>Roll No</th>
+                <th>Status</th>
+                <th>Time</th>
+                <th>📍 Geo</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${records.slice(0, 50).map(r => `
+                <tr>
+                  <td>${Utils.formatDate(r.date)}</td>
+                  <td>${r.class}</td>
+                  <td>${r.subject}</td>
+                  <td>${r.student}</td>
+                  <td><code>${r.rollNo}</code></td>
+                  <td>
+                    <span class="badge ${r.status === 'present' ? 'badge-success' : r.status === 'late' ? 'badge-warning' : 'badge-danger'}">
+                      ${r.status === 'present' ? '✅ Present' : r.status === 'late' ? '⏰ Late' : '❌ Absent'}
+                    </span>
+                  </td>
+                  <td style="font-family:var(--font-mono); font-size:0.82rem;">${r.time}</td>
+                  <td>${r.geoVerified ? '✅' : '—'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        <p style="color:var(--text-tertiary); font-size:0.78rem; margin-top:var(--space-md);">
+          Showing ${Math.min(records.length, 50)} of ${records.length} records
+        </p>
+      ` : '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">No attendance records found</div></div>';
+    }
+
+    // ─── Classes ───
+    function renderClasses() {
+      const classes = Utils.getStore('ih01_classes').filter(c => c.teacherId === currentUser.id);
+      const users = Utils.getStore('ih01_users');
+      const summary = Analytics.getClassWiseSummary();
+
+      document.getElementById('classes-grid').innerHTML = classes.map(cls => {
+        const s = summary.find(x => x.id === cls.id) || {};
+        const students = users.filter(u => u.role === 'student' && u.classId === cls.id);
+        return `
+          <div class="stat-card purple" style="cursor:pointer;">
+            <div style="display:flex; justify-content:space-between; align-items:start;">
+              <div>
+                <div class="stat-value" style="font-size:1.3rem;">${cls.name}</div>
+                <div class="stat-label">${cls.subject} • ${cls.semester} Semester</div>
+              </div>
+              <span class="badge badge-primary">${students.length} students</span>
+            </div>
+            <div style="margin-top:var(--space-md); display:flex; gap:var(--space-lg);">
+              <div>
+                <div style="font-size:1.2rem; font-weight:700; color:var(--success-500);">${s.avgAttendance || 0}%</div>
+                <div style="font-size:0.72rem; color:var(--text-secondary);">Avg Attendance</div>
+              </div>
+              <div>
+                <div style="font-size:1.2rem; font-weight:700;">${s.totalSessions || 0}</div>
+                <div style="font-size:0.72rem; color:var(--text-secondary);">Sessions</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ─── Analytics ───
+    function loadAnalytics() {
+      const stats = Analytics.getOverallStats();
+      Analytics.renderAttendancePieChart('analytics-pie-chart', stats);
+      Analytics.renderClassBarChart('analytics-bar-chart');
+      Analytics.renderStudentAttendanceTable('student-attendance-table');
+    }
+
+    // ─── Export ───
+    function exportPDF() {
+      const students = Analytics.getStudentWiseAttendance();
+      const headers = ['Name', 'Roll No', 'Present', 'Absent', 'Attendance %', 'Status'];
+      const rows = students.map(s => [s.name, s.rollNo || '-', s.present, s.absent, s.percentage + '%', s.risk.level]);
+      Utils.exportToPDF('Attendance Report — EduTrack', headers, rows, 'attendance_report.pdf');
+    }
+
+    function exportExcel() {
+      const students = Analytics.getStudentWiseAttendance();
+      const headers = ['Name', 'Roll No', 'Present', 'Absent', 'Total', 'Attendance %', 'Risk Level'];
+      const rows = students.map(s => [s.name, s.rollNo || '-', s.present, s.absent, s.total, s.percentage, s.risk.level]);
+      Utils.exportToExcel('Attendance Report', headers, rows, 'attendance_report.xlsx');
+    }
+  </script>
+</body>
+</html>
